@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(npm ci:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:pdfme.com)",
+      "Bash(npm run test:db:setup:*)",
+      "Bash(NODE_ENV=test DATABASE_URL=\"file:./tests/test.db\" node tests/setup/seedTestDatabase.js)",
+      "Bash(npm run test:unit:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(sqlite3:*)",
+      "Bash(npm run seed:*)",
+      "Bash(node:*)",
+      "WebFetch(domain:pdfme.readthedocs.io)",
+      "WebSearch",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(git init:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

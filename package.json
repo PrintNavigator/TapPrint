@@ -1,0 +1,66 @@
+{
+  "name": "@tapprint/monorepo",
+  "version": "1.0.0",
+  "description": "TapPrint - Modern printing management system monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=TapPrint-admin\" \"npm run dev --workspace=TapPrint-backend\"",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "prepare": "husky install"
+  },
+  "workspaces": [
+    "TapPrint-admin",
+    "TapPrint-backend",
+    "TapPrint-cockpit",
+    "shared/*"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.13.1",
+    "@typescript-eslint/parser": "^7.13.1",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.2",
+    "typescript": "^5.5.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.8.3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PrintNavigator/TapPrint.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PrintNavigator/TapPrint/issues"
+  },
+  "homepage": "https://github.com/PrintNavigator/TapPrint#readme",
+  "keywords": [
+    "printing",
+    "labels",
+    "pdf",
+    "cups",
+    "management",
+    "monorepo"
+  ],
+  "license": "MIT",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}
