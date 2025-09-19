@@ -192,3 +192,6 @@ The project implements a sophisticated zoom and handle scaling system for the PD
 - **Maximum Zoom**: 400% zoom capability for precise small label editing
 - **Handle Responsiveness**: Automatic inverse scaling maintains usability at all zoom levels
 - **Library Compatibility**: Both react-moveable and PDFme libraries properly patched and integrated
+- **Docker Build**: Fixed with `.npmrc` and `npm ci --ignore-scripts` to prevent patch conflicts
+- **Delete Button Scaling**: Custom CSS selectors ensure UI buttons scale appropriately with zoom
+- **No Double Scaling**: Resolved conflict between patch system and CSS transforms
