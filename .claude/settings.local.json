@@ -57,7 +57,11 @@
       "Bash(do echo \"Request $i:\")",
       "Bash(done)",
       "Bash(git log:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(git remote add:*)",
+      "Bash(gh repo create:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": [],
     "ask": []
