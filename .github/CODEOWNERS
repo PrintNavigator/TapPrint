@@ -1,0 +1,29 @@
+# Global ownership
+* @PrintNavigator/maintainers
+
+# Workspace-specific ownership
+TapPrint-admin/ @PrintNavigator/frontend-team @PrintNavigator/maintainers
+TapPrint-backend/ @PrintNavigator/backend-team @PrintNavigator/maintainers
+TapPrint-cockpit/ @PrintNavigator/frontend-team @PrintNavigator/maintainers
+
+# Shared components
+shared/ @PrintNavigator/maintainers
+
+# Infrastructure and CI/CD
+.github/ @PrintNavigator/devops @PrintNavigator/maintainers
+docker-compose.yml @PrintNavigator/devops @PrintNavigator/maintainers
+Dockerfile* @PrintNavigator/devops @PrintNavigator/maintainers
+*.dockerfile @PrintNavigator/devops @PrintNavigator/maintainers
+
+# Package management
+package.json @PrintNavigator/maintainers
+package-lock.json @PrintNavigator/maintainers
+**/package.json @PrintNavigator/maintainers
+**/package-lock.json @PrintNavigator/maintainers
+
+# Security and configuration
+.env* @PrintNavigator/security @PrintNavigator/maintainers
+*.env @PrintNavigator/security @PrintNavigator/maintainers
+tsconfig*.json @PrintNavigator/maintainers
+.eslintrc* @PrintNavigator/maintainers
+.prettierrc* @PrintNavigator/maintainers

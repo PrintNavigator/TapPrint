@@ -15,9 +15,46 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  # Install dependencies and cache
+  # Detect changes in workspaces
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      admin: ${{ steps.changes.outputs.admin }}
+      backend: ${{ steps.changes.outputs.backend }}
+      cockpit: ${{ steps.changes.outputs.cockpit }}
+      shared: ${{ steps.changes.outputs.shared }}
+      root: ${{ steps.changes.outputs.root }}
+      any: ${{ steps.changes.outputs.admin == 'true' || steps.changes.outputs.backend == 'true' || steps.changes.outputs.cockpit == 'true' || steps.changes.outputs.shared == 'true' || steps.changes.outputs.root == 'true' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect workspace changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            admin:
+              - 'TapPrint-admin/**'
+            backend:
+              - 'TapPrint-backend/**'
+            cockpit:
+              - 'TapPrint-cockpit/**'
+            shared:
+              - 'shared/**'
+            root:
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
+              - 'docker-compose.yml'
+
+  # Install dependencies with intelligent caching
   install:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    outputs:
+      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,106 +63,229 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            TapPrint-admin/node_modules
+            TapPrint-backend/node_modules
+            TapPrint-cockpit/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
 
       - name: Install dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: npm ci
 
-  # Lint and type check all workspaces
+  # Lint and type check workspaces
   lint-and-typecheck:
     runs-on: ubuntu-latest
-    needs: install
+    needs: [changes, install]
+    if: needs.changes.outputs.any == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [
+          { name: 'admin', path: 'TapPrint-admin', condition: needs.changes.outputs.admin == 'true' },
+          { name: 'backend', path: 'TapPrint-backend', condition: needs.changes.outputs.backend == 'true' },
+          { name: 'cockpit', path: 'TapPrint-cockpit', condition: needs.changes.outputs.cockpit == 'true' }
+        ]
     steps:
+      - name: Skip if no changes
+        if: ${{ !fromJson(matrix.workspace.condition) }}
+        run: echo "Skipping ${{ matrix.workspace.name }} - no changes detected"
+
       - name: Checkout code
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore dependencies cache
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            TapPrint-admin/node_modules
+            TapPrint-backend/node_modules
+            TapPrint-cockpit/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          fail-on-cache-miss: true
 
-      - name: Run linting
-        run: npm run lint
+      - name: Run linting for ${{ matrix.workspace.name }}
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        run: npm run lint --workspace=${{ matrix.workspace.path }}
 
-      - name: Run type checking
-        run: npm run typecheck
+      - name: Run type checking for ${{ matrix.workspace.name }}
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        run: npm run typecheck --workspace=${{ matrix.workspace.path }}
 
-  # Test all workspaces
+  # Test workspaces
   test:
     runs-on: ubuntu-latest
-    needs: install
+    needs: [changes, install]
+    if: needs.changes.outputs.any == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [
+          { name: 'admin', path: 'TapPrint-admin', condition: needs.changes.outputs.admin == 'true' },
+          { name: 'backend', path: 'TapPrint-backend', condition: needs.changes.outputs.backend == 'true' },
+          { name: 'cockpit', path: 'TapPrint-cockpit', condition: needs.changes.outputs.cockpit == 'true' }
+        ]
     steps:
+      - name: Skip if no changes
+        if: ${{ !fromJson(matrix.workspace.condition) }}
+        run: echo "Skipping ${{ matrix.workspace.name }} tests - no changes detected"
+
       - name: Checkout code
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore dependencies cache
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            TapPrint-admin/node_modules
+            TapPrint-backend/node_modules
+            TapPrint-cockpit/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          fail-on-cache-miss: true
 
-      - name: Run tests
-        run: npm run test
+      - name: Run tests for ${{ matrix.workspace.name }}
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        run: npm run test --workspace=${{ matrix.workspace.path }}
 
-  # Build all applications
+  # Build applications
   build:
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, test]
+    needs: [changes, lint-and-typecheck, test]
+    if: needs.changes.outputs.any == 'true'
     strategy:
+      fail-fast: false
       matrix:
-        app: [TapPrint-admin, TapPrint-backend, TapPrint-cockpit]
+        workspace: [
+          { name: 'admin', path: 'TapPrint-admin', condition: needs.changes.outputs.admin == 'true' },
+          { name: 'backend', path: 'TapPrint-backend', condition: needs.changes.outputs.backend == 'true' },
+          { name: 'cockpit', path: 'TapPrint-cockpit', condition: needs.changes.outputs.cockpit == 'true' }
+        ]
+    outputs:
+      admin-built: ${{ steps.build-status.outputs.admin }}
+      backend-built: ${{ steps.build-status.outputs.backend }}
+      cockpit-built: ${{ steps.build-status.outputs.cockpit }}
     steps:
+      - name: Skip if no changes
+        if: ${{ !fromJson(matrix.workspace.condition) }}
+        run: echo "Skipping ${{ matrix.workspace.name }} build - no changes detected"
+
       - name: Checkout code
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore dependencies cache
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            TapPrint-admin/node_modules
+            TapPrint-backend/node_modules
+            TapPrint-cockpit/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          fail-on-cache-miss: true
 
-      - name: Build ${{ matrix.app }}
-        run: npm run build --workspace=${{ matrix.app }}
+      - name: Build ${{ matrix.workspace.name }}
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        run: npm run build --workspace=${{ matrix.workspace.path }}
 
-  # Build and push Docker images
+      - name: Cache build artifacts
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ matrix.workspace.path }}/dist
+          key: build-${{ matrix.workspace.name }}-${{ github.sha }}
+
+      - name: Set build status
+        id: build-status
+        run: echo "${{ matrix.workspace.name }}=${{ fromJson(matrix.workspace.condition) }}" >> $GITHUB_OUTPUT
+
+  # Build and push Docker images (conditional on workspace changes)
   docker:
     runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    needs: [changes, build]
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && needs.changes.outputs.any == 'true'
     permissions:
       contents: read
       packages: write
     strategy:
+      fail-fast: false
       matrix:
-        app: [admin, backend, cockpit]
-        include:
-          - app: admin
-            context: ./TapPrint-admin
-            image: tapprint-admin
-          - app: backend
-            context: ./TapPrint-backend
-            image: tapprint-backend
-          - app: cockpit
-            context: ./TapPrint-cockpit
-            image: tapprint-cockpit
+        workspace: [
+          {
+            name: 'admin',
+            context: './TapPrint-admin',
+            image: 'tapprint-admin',
+            condition: needs.changes.outputs.admin == 'true'
+          },
+          {
+            name: 'backend',
+            context: './TapPrint-backend',
+            image: 'tapprint-backend',
+            condition: needs.changes.outputs.backend == 'true'
+          },
+          {
+            name: 'cockpit',
+            context: './TapPrint-cockpit',
+            image: 'tapprint-cockpit',
+            condition: needs.changes.outputs.cockpit == 'true'
+          }
+        ]
     steps:
+      - name: Skip if no changes
+        if: ${{ !fromJson(matrix.workspace.condition) }}
+        run: echo "Skipping Docker build for ${{ matrix.workspace.name }} - no changes detected"
+
       - name: Checkout code
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: actions/checkout@v4
 
+      - name: Restore build cache
+        if: ${{ fromJson(matrix.workspace.condition) }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ matrix.workspace.context }}/dist
+          key: build-${{ matrix.workspace.name }}-${{ github.sha }}
+          fail-on-cache-miss: true
+
       - name: Set up Docker Buildx
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Container Registry
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -133,32 +293,37 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
+        if: ${{ fromJson(matrix.workspace.condition) }}
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.workspace.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image for ${{ matrix.workspace.name }}
+        if: ${{ fromJson(matrix.workspace.condition) }}
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.context }}
+          context: ${{ matrix.workspace.context }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.workspace.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.workspace.name }}
+          platforms: linux/amd64,linux/arm64
 
-  # Deploy (placeholder for future deployment)
+  # Deploy (conditional on successful builds)
   deploy:
     runs-on: ubuntu-latest
-    needs: docker
-    if: github.ref == 'refs/heads/main'
+    needs: [changes, docker]
+    if: github.ref == 'refs/heads/main' && needs.changes.outputs.any == 'true'
     environment: production
     steps:
       - name: Deploy to production
-        run: echo "Deployment step - integrate with your deployment system"
+        run: |
+          echo "Deployment step - integrate with your deployment system"
+          echo "Changes detected in: admin=${{ needs.changes.outputs.admin }}, backend=${{ needs.changes.outputs.backend }}, cockpit=${{ needs.changes.outputs.cockpit }}"

@@ -1,0 +1,150 @@
+version: 2
+
+updates:
+  # Root package.json
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    reviewers:
+      - "@PrintNavigator/maintainers"
+    labels:
+      - "dependencies"
+      - "root"
+    open-pull-requests-limit: 5
+
+  # TapPrint-admin workspace
+  - package-ecosystem: "npm"
+    directory: "/TapPrint-admin"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:30"
+    commit-message:
+      prefix: "chore(admin)"
+      include: "scope"
+    reviewers:
+      - "@PrintNavigator/frontend-team"
+      - "@PrintNavigator/maintainers"
+    labels:
+      - "dependencies"
+      - "admin"
+    open-pull-requests-limit: 5
+    ignore:
+      # Ignore major updates for UI libraries to prevent breaking changes
+      - dependency-name: "@mantine/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  # TapPrint-backend workspace
+  - package-ecosystem: "npm"
+    directory: "/TapPrint-backend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    commit-message:
+      prefix: "chore(backend)"
+      include: "scope"
+    reviewers:
+      - "@PrintNavigator/backend-team"
+      - "@PrintNavigator/maintainers"
+    labels:
+      - "dependencies"
+      - "backend"
+    open-pull-requests-limit: 5
+    ignore:
+      # Be cautious with database and security-related updates
+      - dependency-name: "@prisma/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+
+  # TapPrint-cockpit workspace
+  - package-ecosystem: "npm"
+    directory: "/TapPrint-cockpit"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:30"
+    commit-message:
+      prefix: "chore(cockpit)"
+      include: "scope"
+    reviewers:
+      - "@PrintNavigator/frontend-team"
+      - "@PrintNavigator/maintainers"
+    labels:
+      - "dependencies"
+      - "cockpit"
+    open-pull-requests-limit: 5
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/.github"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    reviewers:
+      - "@PrintNavigator/devops"
+      - "@PrintNavigator/maintainers"
+    labels:
+      - "ci/cd"
+      - "github-actions"
+    open-pull-requests-limit: 3
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/TapPrint-admin"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "10:00"
+    commit-message:
+      prefix: "chore(docker)"
+    reviewers:
+      - "@PrintNavigator/devops"
+    labels:
+      - "docker"
+      - "admin"
+
+  - package-ecosystem: "docker"
+    directory: "/TapPrint-backend"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "10:30"
+    commit-message:
+      prefix: "chore(docker)"
+    reviewers:
+      - "@PrintNavigator/devops"
+    labels:
+      - "docker"
+      - "backend"
+
+  - package-ecosystem: "docker"
+    directory: "/TapPrint-cockpit"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "11:00"
+    commit-message:
+      prefix: "chore(docker)"
+    reviewers:
+      - "@PrintNavigator/devops"
+    labels:
+      - "docker"
+      - "cockpit"
